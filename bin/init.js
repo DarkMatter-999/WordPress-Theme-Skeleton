@@ -139,10 +139,8 @@ function askQuestion( index = 0 ) {
 function generateThemeFiles() {
 	const slug = slugify( answers.themeName );
 	const constPrefix = getPrefix( answers.themeName ).toUpperCase();
-	const themeDir = path.join( process.cwd(), slug );
+	const themeDir = process.cwd();
 	const fullNamespace = answers.namespace;
-
-	fs.mkdirSync( themeDir, { recursive: true } );
 
 	// --- style.css ---
 	const styleContent = `/**
@@ -186,6 +184,11 @@ define('${ constPrefix }_THEME_URL', get_template_directory_uri());
 require_once ${ constPrefix }_THEME_PATH . '/include/helpers/autoloader.php';
 
 if (! function_exists('${ slug.replace( /-/g, '_' ) }_setup')) {
+  /**
+	 * Theme Main setup function.
+	 *
+	 * @return void
+	 */
     function ${ slug.replace( /-/g, '_' ) }_setup() {
         Theme::get_instance();
     }
@@ -193,6 +196,11 @@ if (! function_exists('${ slug.replace( /-/g, '_' ) }_setup')) {
 ${ slug.replace( /-/g, '_' ) }_setup();
 
 if (! function_exists('${ constPrefix.toLowerCase() }_load_textdomain')) {
+  /**
+	 * Load the textdomain from template-dir/languages
+	 *
+	 * @return void
+	 */
     function ${ constPrefix.toLowerCase() }_load_textdomain() {
         load_theme_textdomain('${
 			answers.textDomain || slug
@@ -205,36 +213,6 @@ add_action('after_setup_theme', '${ constPrefix.toLowerCase() }_load_textdomain'
 	fs.writeFileSync(
 		path.join( themeDir, 'functions.php' ),
 		functionsContent,
-		'utf8'
-	);
-
-	// Create `include/helpers/autoloader.php` stub if it doesn't exist
-	const helpersDir = path.join( themeDir, 'include/helpers' );
-	fs.mkdirSync( helpersDir, { recursive: true } );
-
-	const autoloaderStub = `<?php
-// Autoloader stub
-spl_autoload_register(function ($class) {
-    $prefix = '${ fullNamespace }\\\\';
-    $base_dir = __DIR__ . '/../';
-
-    $len = strlen($prefix);
-    if (strncmp($prefix, $class, $len) !== 0) {
-        return;
-    }
-
-    $relative_class = substr($class, $len);
-    $file = $base_dir . str_replace('\\\\', '/', $relative_class) . '.php';
-
-    if (file_exists($file)) {
-        require $file;
-    }
-});
-`;
-
-	fs.writeFileSync(
-		path.join( helpersDir, 'autoloader.php' ),
-		autoloaderStub,
 		'utf8'
 	);
 
