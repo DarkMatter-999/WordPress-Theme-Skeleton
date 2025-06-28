@@ -12,7 +12,6 @@ function slugify( str ) {
 
 function getPrefix( str ) {
 	const matches = str.match( /(?:^|[ _])([a-zA-Z])|([A-Z])/g ) || [];
-
 	return matches
 		.map( ( match ) =>
 			match.length === 1 ? match : match[ match.length - 1 ].toUpperCase()
@@ -22,14 +21,14 @@ function getPrefix( str ) {
 
 function replaceInIncludes() {
 	const includesDir = path.join( process.cwd(), 'include' );
-	const targetNamespace = 'DarkMatter_Plugin';
-	const targetPathConst = 'DMP_PLUGIN_PATH';
+	const targetNamespace = 'DarkMatter_Theme';
+	const targetPathConst = 'DM_THEME_PATH';
 	const targetPackage = 'DarkMatter_Package';
 
 	const replacementNamespace = answers.namespace;
 	const replacementPathConst = `${ getPrefix(
-		answers.pluginName
-	) }_PLUGIN_PATH`;
+		answers.themeName
+	) }_THEME_PATH`;
 	const replacementPackage = answers.package;
 
 	if ( ! fs.existsSync( includesDir ) ) {
@@ -72,43 +71,50 @@ function replaceInIncludes() {
 	walkDir( includesDir );
 }
 
-// Setup CLI interface
+// CLI
 const rl = readline.createInterface( {
 	input: process.stdin,
 	output: process.stdout,
 } );
 
 const questions = [
-	{ key: 'pluginName', question: 'Plugin Name', default: 'My Plugin' },
-	{ key: 'pluginURI', question: 'Plugin URI', default: '' },
+	{ key: 'themeName', question: 'Theme Name', default: 'My Theme' },
+	{ key: 'themeURI', question: 'Theme URI', default: '' },
 	{
 		key: 'description',
-		question: 'Plugin Description',
-		default: 'A custom WordPress plugin.',
+		question: 'Theme Description',
+		default: 'A custom WordPress theme.',
 	},
 	{ key: 'version', question: 'Version', default: '1.0.0' },
-	{
-		key: 'requiresWP',
-		question: 'Requires at least (WordPress version)',
-		default: '6.5',
-	},
-	{ key: 'requiresPHP', question: 'Requires PHP', default: '7.4' },
 	{ key: 'author', question: 'Author Name', default: '' },
 	{ key: 'authorURI', question: 'Author URI', default: '' },
 	{
 		key: 'license',
 		question: 'License',
-		default: 'GPL v2 or later',
+		default: 'GNU General Public License v2.0 or later',
 	},
 	{
 		key: 'licenseURI',
 		question: 'License URI',
 		default: 'https://www.gnu.org/licenses/gpl-2.0.html',
 	},
-	{ key: 'category', question: 'Category', default: 'Plugin' },
+	{
+		key: 'tags',
+		question: 'Theme Tags (comma separated)',
+		default: 'block-patterns, full-site-editing',
+	},
+	{ key: 'textDomain', question: 'Text Domain', default: '' },
+	{ key: 'domainPath', question: 'Domain Path', default: '/languages' },
+	{
+		key: 'testedUpTo',
+		question: 'Tested up to (WP version)',
+		default: '6.8.1',
+	},
+	{ key: 'requiresWP', question: 'Requires at least', default: '6.5' },
+	{ key: 'requiresPHP', question: 'Requires PHP', default: '7.4' },
 	{ key: 'package', question: 'Package Name', default: '' },
 	{ key: 'email', question: 'Author Email', default: '' },
-	{ key: 'namespace', question: 'Namespace', default: 'My_Plugin' },
+	{ key: 'namespace', question: 'Namespace', default: 'MyTheme' },
 ];
 
 const answers = {};
@@ -125,70 +131,123 @@ function askQuestion( index = 0 ) {
 			askQuestion( index + 1 );
 		} else {
 			rl.close();
-			generatePluginFile();
+			generateThemeFiles();
 		}
 	} );
 }
 
-function generatePluginFile() {
-	const slug = slugify( answers.pluginName );
-	const constPrefix = getPrefix( answers.pluginName );
-	const textDomain = slug;
-	const domainPath = '/languages';
-	const pluginFileName = `${ slug }.php`;
+function generateThemeFiles() {
+	const slug = slugify( answers.themeName );
+	const constPrefix = getPrefix( answers.themeName ).toUpperCase();
+	const themeDir = path.join( process.cwd(), slug );
+	const fullNamespace = answers.namespace;
 
-	const content = `<?php
-/**
- * Plugin Name:       ${ answers.pluginName }
- * Plugin URI:        ${ answers.pluginURI }
+	fs.mkdirSync( themeDir, { recursive: true } );
+
+	// --- style.css ---
+	const styleContent = `/**
+ * Theme Name:        ${ answers.themeName }
+ * Theme URI:         ${ answers.themeURI }
  * Description:       ${ answers.description }
  * Version:           ${ answers.version }
- * Requires at least: ${ answers.requiresWP }
- * Requires PHP:      ${ answers.requiresPHP }
  * Author:            ${ answers.author }
  * Author URI:        ${ answers.authorURI }
+ * Tags:              ${ answers.tags }
+ * Text Domain:       ${ answers.textDomain || slug }
+ * Domain Path:       ${ answers.domainPath }
+ * Tested up to:      ${ answers.testedUpTo }
+ * Requires at least: ${ answers.requiresWP }
+ * Requires PHP:      ${ answers.requiresPHP }
  * License:           ${ answers.license }
  * License URI:       ${ answers.licenseURI }
- * Text Domain:       ${ textDomain }
- * Domain Path:       ${ domainPath }
- *
- * @category ${ answers.category }
- * @package  ${ answers.package }
- * @author   ${ answers.author } <${ answers.email }>
- * @license  ${ answers.license } <${ answers.licenseURI }>
- * @link     ${ answers.pluginURI }
  */
-
-if ( ! defined( 'ABSPATH' ) ) {
-	exit();
-}
-
-/**
- * Plugin base path and URL.
- */
-define( '${ constPrefix }_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
-define( '${ constPrefix }_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-
-require_once ${ constPrefix }_PLUGIN_PATH . 'include/helpers/autoloader.php';
-
-use ${ answers.namespace }\\Plugin;
-
-Plugin::get_instance();
 `;
 
-	fs.writeFileSync( path.join( process.cwd(), pluginFileName ), content );
-
-	// eslint-disable-next-line no-console
-	console.log(
-		`✅ Plugin generated: ${ path.join( process.cwd(), pluginFileName ) }`
+	fs.writeFileSync(
+		path.join( themeDir, 'style.css' ),
+		styleContent,
+		'utf8'
 	);
-	// eslint-disable-next-line no-console
-	console.log( `🔧 Constant prefix used: ${ constPrefix }` );
-	// eslint-disable-next-line no-console
-	console.log( `📦 Plugin slug: ${ slug }` );
-	// eslint-disable-next-line no-console
-	console.log( `📁 Directory: ${ process.cwd() }` );
 
+	// --- functions.php ---
+	const functionsContent = `<?php
+/**
+ * Functions file for ${ answers.themeName }.
+ *
+ * @package ${ answers.package }
+ * @since   ${ answers.themeName } ${ answers.version }
+ */
+
+use ${ fullNamespace }\\Theme;
+
+define('${ constPrefix }_THEME_PATH', get_template_directory());
+define('${ constPrefix }_THEME_URL', get_template_directory_uri());
+
+require_once ${ constPrefix }_THEME_PATH . '/include/helpers/autoloader.php';
+
+if (! function_exists('${ slug.replace( /-/g, '_' ) }_setup')) {
+    function ${ slug.replace( /-/g, '_' ) }_setup() {
+        Theme::get_instance();
+    }
+}
+${ slug.replace( /-/g, '_' ) }_setup();
+
+if (! function_exists('${ constPrefix.toLowerCase() }_load_textdomain')) {
+    function ${ constPrefix.toLowerCase() }_load_textdomain() {
+        load_theme_textdomain('${
+			answers.textDomain || slug
+		}', false, ${ constPrefix }_THEME_PATH . '${ answers.domainPath }');
+    }
+}
+add_action('after_setup_theme', '${ constPrefix.toLowerCase() }_load_textdomain');
+`;
+
+	fs.writeFileSync(
+		path.join( themeDir, 'functions.php' ),
+		functionsContent,
+		'utf8'
+	);
+
+	// Create `include/helpers/autoloader.php` stub if it doesn't exist
+	const helpersDir = path.join( themeDir, 'include/helpers' );
+	fs.mkdirSync( helpersDir, { recursive: true } );
+
+	const autoloaderStub = `<?php
+// Autoloader stub
+spl_autoload_register(function ($class) {
+    $prefix = '${ fullNamespace }\\\\';
+    $base_dir = __DIR__ . '/../';
+
+    $len = strlen($prefix);
+    if (strncmp($prefix, $class, $len) !== 0) {
+        return;
+    }
+
+    $relative_class = substr($class, $len);
+    $file = $base_dir . str_replace('\\\\', '/', $relative_class) . '.php';
+
+    if (file_exists($file)) {
+        require $file;
+    }
+});
+`;
+
+	fs.writeFileSync(
+		path.join( helpersDir, 'autoloader.php' ),
+		autoloaderStub,
+		'utf8'
+	);
+
+	// eslint-disable-next-line no-console
+	console.log( `✅ Theme generated at: ${ themeDir }` );
+	// eslint-disable-next-line no-console
+	console.log( `📁 Namespace: ${ fullNamespace }` );
+	// eslint-disable-next-line no-console
+	console.log( `📦 Slug: ${ slug }` );
+	// eslint-disable-next-line no-console
+	console.log( `🔧 Constant prefix: ${ constPrefix }` );
+
+	process.chdir( themeDir ); // Move to theme dir for include replacement
 	replaceInIncludes();
 }
 
