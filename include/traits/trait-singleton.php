@@ -7,10 +7,9 @@
  * @package DarkMatter_Package
  **/
 
-namespace DarkMatter_Plugin\Traits;
+namespace DarkMatter_Theme\Traits;
 
 trait Singleton {
-
 
 	/**
 	 * Instance of the singleton class.
