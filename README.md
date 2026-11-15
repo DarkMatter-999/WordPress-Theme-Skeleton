@@ -1,133 +1,75 @@
 # WordPress Theme Skeleton
 
-This repository provides a skeleton for developing WordPress themes. It's designed to streamline development workflow by providing a pre-configured setup for common tasks like linting, building, and initializing theme.
+A starter for developing WordPress themes with a Vite-based asset workflow, PHP and frontend linting, and an interactive theme initializer.
 
-## Features
+## Requirements
 
-*   **WordPress Scripts Integration:** Leverages `@wordpress/scripts` for easy handling of JavaScript and CSS compilation, linting, and development server setup.
-*   **Code Linting:**
-    *   **PHP:** Integrated with PHP_CodeSniffer for enforcing consistent PHP coding standards.
-    *   **JavaScript:** Uses ESLint via `@wordpress/scripts`.
-    *   **CSS/SCSS:** Uses Stylelint via `@wordpress/scripts`.
-*   **Git Hooks (Husky):** Configured with Husky to run `lint-staged` before committing, ensuring that only linted and formatted code is committed to your repository.
-*   **Autoloading:** Includes a basic autoloader setup (within the `include/helpers` directory) to manage PHP classes efficiently.
-*   **Clear Structure:** Provides a logical directory structure to keep theme organized.
+- Node.js `^20.19.0` or `>=22.12.0`
+- pnpm `12.20.0` (managed through Corepack)
+- Composer, for PHP_CodeSniffer
 
-## Getting Started
+## Getting started
 
-### 1. Clone the Repository
+Clone the repository and install the JavaScript dependencies:
 
 ```bash
-git clone https://github.com/DarkMatter-999/WordPress-Theme-Skeleton.git your-new-theme-name
-cd your-new-theme-name
+git clone https://github.com/DarkMatter-999/WordPress-Theme-Skeleton.git your-theme-name
+cd your-theme-name
+corepack enable
+corepack prepare pnpm@12.20.0 --activate
+pnpm install
 ```
 
-### 2. Install Dependencies
-
-This project uses `npm` for managing front-end and development dependencies.
-
-```bash
-npm install
-```
-
-### 3. Initialize Your Theme
-
-Run the initialization script to set up your theme's basic information. This script will prompt you for details like theme name, author, version, etc., and will update the main `style.css` and `functions.php` files, as well as internal namespaces and constants.
-
-```bash
-npm run init
-```
-
-Follow the prompts to enter your theme's details.
-
-### 4. Composer Dependencies (for PHPCS)
-
-To use the PHP linting, you'll need Composer to install `PHP_CodeSniffer`.
-
-Once Composer is installed, run:
+Install the PHP development dependencies and initialize theme metadata:
 
 ```bash
 composer install
+pnpm run init
 ```
 
-This will install PHP_CodeSniffer into the `vendor/` directory, allowing `npm run lint:php` to work.
+The initializer generates `style.css` and `functions.php` and updates the namespace and theme path constant in PHP files. Review its prompts and generated files before using the theme.
 
-## Development Workflow
+## Development
 
-### Starting the Development Server
-
-To start the development server for JavaScript and CSS, which watches for changes and provides hot reloading:
+Run the Vite server while developing the theme:
 
 ```bash
-npm start
+pnpm dev
 ```
 
-### Building for Production
+Keep the command running while browsing the WordPress site that has this theme active. PHP uses the fresh, ignored `assets/build/hot` marker to load mapped source entries from Vite at `http://localhost:5173`; Vite provides CSS/JavaScript HMR. The marker is refreshed while the server runs and removed on normal shutdown. If the process exits unexpectedly, the marker is considered stale after 15 seconds and PHP falls back to production asset resolution.
 
-To compile and minify your JavaScript and CSS for production:
+Source entry files live under `assets/src/js/` and `assets/src/css/`. Present top-level JS/JSX/TS/TSX and CSS/SCSS files are discovered and built independently. For example, `assets/src/css/main.css` is a standalone stylesheet entry; it does not need to be imported by a JavaScript file. PHP's existing enqueue hooks map `main.css` and `main.js`, plus an optional `editor.scss`; add a mapping in `include/classes/class-assets.php` when you add another source entry. The build does not require an `editor` or `screen` entry.
+
+## Production build
+
+Build optimized assets and the Vite manifest:
 
 ```bash
-npm run build
+pnpm build
 ```
 
-### Code Linting and Formatting
+The build writes generated files to `assets/build/` and the manifest to `assets/build/.vite/manifest.json`. Deploy the generated `assets/build/` directory with the theme. Production PHP resolves assets from the manifest and does not require Node.js or a running Vite server.
 
-This skeleton comes with pre-configured linting rules for PHP, JavaScript, and CSS.
+## Linting and tests
 
-*   **Lint All:**
-    ```bash
-    npm run lint
-    ```
-*   **Lint CSS/SCSS:**
-    ```bash
-    npm run lint:css
-    ```
-*   **Fix CSS/SCSS Linting Issues:**
-    ```bash
-    npm run lint:css:fix
-    ```
-*   **Lint JavaScript:**
-    ```bash
-    npm run lint:js
-    ```
-*   **Fix JavaScript Linting Issues:**
-    ```bash
-    npm run lint:js:fix
-    ```
-*   **Lint PHP:**
-    ```bash
-    npm run lint:php
-    ```
-*   **Fix PHP Linting Issues:**
-    ```bash
-    npm run lint:php:fix
-    ```
+The JavaScript and stylesheet linters use `@wordpress/scripts`; PHP linting uses Composer's PHP_CodeSniffer dependencies.
 
-### Pre-Commit Linting
+```bash
+pnpm lint:js
+pnpm lint:css
+pnpm lint:php
+pnpm test:js -- --run
+php -d zend.assertions=1 -d assert.exception=1 tests/php/test-vite-assets.php
+```
 
-This project uses `husky` and `lint-staged` to automatically run linters on staged files before you commit. This helps maintain code quality and consistency.
+Fix commands are available as `pnpm lint:js:fix`, `pnpm lint:css:fix`, and `pnpm lint:php:fix`.
 
-You don't need to run `lint:staged` manually; it's triggered by Git when you commit.
+## Project structure
 
-## Project Structure
-
-*   `bin/`: Contains utility scripts, including `init.js`.
-*   `include/`: Main directory for your theme's PHP classes and core logic.
-    *   `include/helpers/autoloader.php`: Basic autoloader for your theme classes.
-*   `src/`: Contains your raw JavaScript and CSS/SCSS files.
-*   `build/`: (Generated) Compiled and minified assets from `npm run build`.
-*   `vendor/`: (Generated) Composer dependencies (e.g., PHP_CodeSniffer).
-*   `style.css`: The main theme stylesheet, updated by `npm run init`.
-*   `functions.php`: The main theme functions file, updated by `npm run init`.
-*   `index.php`: A minimal `index.php` (you'll likely want to expand on this).
-*   `stylelintrc.json`: Stylelint configuration.
-*   `phpcs.xml`: PHP_CodeSniffer configuration.
-*   `package.json`: Project metadata and npm scripts.
-*   `composer.json`: Composer metadata and dependencies.
-
-## Customization
-
-*   **PHP Namespace:** The `init` script will prompt you for a namespace. This will be used for your main theme classes.
-*   **Constant Prefix:** The `init` script automatically generates a unique constant prefix based on your theme name.
-*   **Linting Rules:** Adjust `stylelintrc.json`, and `phpcs.xml` to match your preferred coding standards.
-*   **Autoloading:** If your project grows complex, you might consider migrating to a more robust autoloader (e.g., Composer's autoloader) for PHP classes.
+- `assets/src/` — JavaScript, TypeScript, CSS, and SCSS source entries.
+- `assets/build/` — generated production files, Vite manifest, and temporary dev marker; ignored by Git.
+- `bin/` — initializer and Vite development-server helper.
+- `include/` — theme PHP classes, traits, and helpers.
+- `parts/`, `templates/` — block theme template parts and templates.
+- `theme.json` — WordPress theme settings and styles.
